@@ -1,0 +1,7 @@
+1- baixar instalador raylib
+
+2- instalar
+
+3- abrir C:\raylib\npp
+
+4- abrir arquivo exemplo de C:\raylib\raylib\examples\core
