@@ -60,8 +60,6 @@ Wall walls[12];
 bool gameOver = false;
 bool gameWon = false;
 bool restartLevel = false;
-bool closeGameOnWin = false;
-
 
 int numBooks = 5;
 int booksCollected = 0;
@@ -80,7 +78,7 @@ void InitGame() {
     player.color = WHITE;
 
     // Load the player sprite image
-    player.texture = LoadTexture("C:/Users/Casa/Documents/Programacao/C/raylib/player_sprite.png");
+    player.texture = LoadTexture("C:/Users/TEMP/Documents/UpeGame/player_sprite.png");
 
     // Initialize zombie
     zombie.position = (Vector2){ 100, 100 };
@@ -88,24 +86,50 @@ void InitGame() {
     zombie.color = WHITE; // No longer needed for the zombie
 
     // Load the zombie sprite image
-    zombie.texture = LoadTexture("C:/Users/Casa/Documents/Programacao/C/raylib/zombie_sprite.png");
-      
+    zombie.texture = LoadTexture("C:/Users/TEMP/Documents/UpeGame/zombie_sprite.png");
+    
+    /// Define wall positions
+    walls[0].rect = (Rectangle){ 100, 0, 10, SCREEN_HEIGHT }; // Left wall
+    walls[1].rect = (Rectangle){ 0, 100, SCREEN_WIDTH, 10 }; // Top wall
+    walls[2].rect = (Rectangle){ 100, SCREEN_HEIGHT - 10, SCREEN_WIDTH - 100, 10 }; // Bottom wall
+    walls[3].rect = (Rectangle){ SCREEN_WIDTH - 10, 100, 10, SCREEN_HEIGHT - 100 }; // Right wall
+    
+    // Additional walls for the cross shape
+    walls[4].rect = (Rectangle){ 200, 100, 10, 100 }; // Vertical wall for the upper arm of the cross
+    walls[5].rect = (Rectangle){ 100, 200, 100, 10 }; // Horizontal wall for the left arm of the cross
+    walls[6].rect = (Rectangle){ 200, 300, 10, 100 }; // Vertical wall for the lower arm of the cross
+    walls[7].rect = (Rectangle){ 300, 200, 100, 10 }; // Horizontal wall for the right arm of the cross
+
+    // Completing the cross shape
+    walls[8].rect = (Rectangle){ 200, 200, 10, 100 }; // Vertical wall to connect the left and right arms
+    walls[9].rect = (Rectangle){ 200, 200, 100, 10 }; // Horizontal wall to connect the upper and lower arms
+    walls[10].rect = (Rectangle){ 200, 200, 100, 100 }; // Center square
+    walls[11].rect = (Rectangle){ 210, 210, 80, 80 }; // Inner square
+    
     // Load grass texture
-    grassTexture = LoadTexture("C:/Users/Casa/Documents/Programacao/C/raylib/grass.png");
+    grassTexture = LoadTexture("C:/Users/TEMP/Documents/UpeGame/grass.png");
 
     // Load the book sprite image and create book entities
     for (int i = 0; i < numBooks; i++) {
         books[i].position = (Vector2){ GetRandomValue(100, SCREEN_WIDTH - 100), GetRandomValue(100, SCREEN_HEIGHT - 100) };
-        books[i].texture = LoadTexture("C:/Users/Casa/Documents/Programacao/C/raylib/cBook_sprite.png");
+        books[i].texture = LoadTexture("C:/Users/TEMP/Documents/UpeGame/cBook_sprite.png");
         books[i].collected = false;
     }
 
     // Set player position
     player.position = (Vector2){ SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 };
 
+    // Set zombie position inside the walls
+    int randX, randY;
+    do {
+        randX = GetRandomValue(walls[0].rect.x + 10, walls[3].rect.x - 10);
+        randY = GetRandomValue(walls[1].rect.y + 10, walls[2].rect.y - 10);
+    } while (CheckCollisionCircleRec((Vector2){ randX, randY }, zombie.radius, walls[0].rect) ||
+             CheckCollisionCircleRec((Vector2){ randX, randY }, zombie.radius, walls[1].rect) ||
+             CheckCollisionCircleRec((Vector2){ randX, randY }, zombie.radius, walls[2].rect) ||
+             CheckCollisionCircleRec((Vector2){ randX, randY }, zombie.radius, walls[3].rect));
 
-
-    zombie.position = (Vector2){ SCREEN_WIDTH / 1, SCREEN_HEIGHT / 1 };
+    zombie.position = (Vector2){ randX, randY };
     
     gameOver = false;
     gameWon = false;
@@ -128,8 +152,7 @@ void UpdateGame() {
 
     if (gameWon && IsKeyPressed(KEY_ENTER)) {
         AskPlayerName(booksCollected);
-        //restartLevel = true;
-        closeGameOnWin = true; // Set the flag to close the game on win
+        restartLevel = true;
         return;
     }
 
@@ -137,7 +160,24 @@ void UpdateGame() {
         return;
 
 
-    
+    // Check for collisions with walls
+    for (int i = 0; i < 4; i++) {
+        if (CheckCollisionCircleRec(player.position, player.radius, walls[i].rect) ||
+            CheckCollisionCircleRec(zombie.position, zombie.radius, walls[i].rect)) {
+            // Check for collisions with walls for player
+    if (player.position.x - player.radius < walls[0].rect.x) player.position.x = walls[0].rect.x + player.radius;
+    if (player.position.x + player.radius > walls[3].rect.x + walls[3].rect.width) player.position.x = walls[3].rect.x + walls[3].rect.width - player.radius;
+    if (player.position.y - player.radius < walls[1].rect.y) player.position.y = walls[1].rect.y + player.radius;
+    if (player.position.y + player.radius > walls[2].rect.y + walls[2].rect.height) player.position.y = walls[2].rect.y + walls[2].rect.height - player.radius;
+
+    // Check for collisions with walls for zombie
+    if (zombie.position.x - zombie.radius < walls[0].rect.x) zombie.position.x = walls[0].rect.x + zombie.radius;
+    if (zombie.position.x + zombie.radius > walls[3].rect.x + walls[3].rect.width) zombie.position.x = walls[3].rect.x + walls[3].rect.width - zombie.radius;
+    if (zombie.position.y - zombie.radius < walls[1].rect.y) zombie.position.y = walls[1].rect.y + zombie.radius;
+    if (zombie.position.y + zombie.radius > walls[2].rect.y + walls[2].rect.height) zombie.position.y = walls[2].rect.y + walls[2].rect.height - zombie.radius;
+
+        }
+    }
     
     // Update player movement
     Vector2 playerDirection  = { 0 }; // Initialize a direction vector with (0, 0)
@@ -199,7 +239,12 @@ void DrawGame() {
         }
     }
 
-        
+    
+    // Draw walls
+    for (int i = 0; i < 12; i++) {
+        DrawRectangleRec(walls[i].rect, GRAY);
+    }
+    
     // Draw the number of books collected
     char booksCollectedText[30];
     snprintf(booksCollectedText, 20, "Livros Coletados: %d", booksCollected);
@@ -234,81 +279,83 @@ void DrawGame() {
 }
 
 int main() {
+    
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Aventura Universitária: O Encontro com o Predador");
     SetTargetFPS(60);
 
     InitGame();
+    
     InitAudioDevice();
-    bgMusic = LoadMusicStream("C:/Users/Casa/Documents/Programacao/C/raylib/Boss Theme.mp3");
-    SetMusicVolume(bgMusic, 0.8f);
-    PlayMusicStream(bgMusic);
+    
+    // Load background music file (e.g., "C:/Users/Casa/Music/song.mp3")
+    bgMusic = LoadMusicStream("C:/Users/TEMP/Documents/UpeGame/Boss Theme.mp3");
 
+    // Set music volume (optional)
+    SetMusicVolume(bgMusic, 0.8f);
+
+    // Start playing the background music
+    PlayMusicStream(bgMusic);
+    
     AskPlayerName(booksCollected);
 
+    // Initialize the current game state as STATE_MENU
     GameState currentGameState = STATE_MENU;
 
     while (!WindowShouldClose()) {
-        UpdateMusicStream(bgMusic);
+    // Update the music stream (required to keep the music playing)
+    UpdateMusicStream(bgMusic);
+    // Handle state transitions based on user input
+    switch (currentGameState) {
+        case STATE_MENU:
+            DrawMenu();
+            if (IsKeyPressed(KEY_ONE)) {
+                currentGameState = STATE_PLAY;
+                InitGame();
+            } else if (IsKeyPressed(KEY_TWO)) {
+                currentGameState = STATE_RANKING;
+            } else if (IsKeyPressed(KEY_THREE)) {
+                currentGameState = STATE_CREDITS;
+            } else if (IsKeyPressed(KEY_FOUR)) {
+                currentGameState = STATE_DONATIONS;
+            }
+            break;
+        case STATE_PLAY:
+            UpdateGame();
+            DrawGame();
+            break;
+        case STATE_RANKING:
+            LoadScores(); // Load scores from the file
+            DrawScores();
 
-        // Handle the closing process
-        if (closeGameOnWin == true) {
-            void SaveScore(const char* playerName, int score); // Save the score
-            CloseWindow();
-            break; // Exit the game loop
-        
-        }
-        switch (currentGameState) {
-            case STATE_MENU:
-                DrawMenu();
-                if (IsKeyPressed(KEY_ONE)) {
-                    currentGameState = STATE_PLAY;
-                    InitGame();
-                } else if (IsKeyPressed(KEY_TWO)) {
-                    currentGameState = STATE_RANKING;
-                } else if (IsKeyPressed(KEY_THREE)) {
-                    currentGameState = STATE_CREDITS;
-                } else if (IsKeyPressed(KEY_FOUR)) {
-                    currentGameState = STATE_DONATIONS;
-                }
-                else if (IsKeyPressed(KEY_FIVE)) {
-                // Exit the program when '5' is pressed
-                CloseWindow();
-                }
-                break;
-            case STATE_PLAY:
-                UpdateGame();
-                DrawGame();
-                break;
-            case STATE_RANKING:
-                LoadScores();
-                DrawScores();
-
-                if (IsKeyPressed(KEY_ESCAPE)) {
-                    currentGameState = STATE_MENU;
-                }
-                break;
-            case STATE_CREDITS:
-                DrawCredits();
-                if (IsKeyPressed(KEY_ESCAPE)) {
-                    currentGameState = STATE_MENU;
-                }
-                break;
-            case STATE_DONATIONS:
-                DrawDonations();
-                if (IsKeyPressed(KEY_ESCAPE)) {
-                    currentGameState = STATE_MENU;
-                }
-                break;
-            default:
-                break;
-        }
-
-        if (IsKeyPressed(KEY_TAB)) {
-            currentGameState = STATE_MENU;
-        }
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                currentGameState = STATE_MENU;
+            }
+            break;
+        case STATE_CREDITS:
+            DrawCredits(); // Placeholder function
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                currentGameState = STATE_MENU;
+            }
+            break;
+        case STATE_DONATIONS:
+            DrawDonations(); // Placeholder function
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                currentGameState = STATE_MENU;
+            }
+            break;
+        default:
+            break;
     }
+
+    // Handle TAB key press to return to the menu state
+    if (IsKeyPressed(KEY_TAB)) {
+        currentGameState = STATE_MENU;
+    }
+}
     
-    // Close the window and cleanup resources
+    
+    
+    // Unload textures when closing the window
     UnloadTexture(player.texture);
     UnloadTexture(zombie.texture);
     UnloadTexture(grassTexture);
@@ -317,8 +364,8 @@ int main() {
         if (!books[i].collected)
             UnloadTexture(books[i].texture);
     }
-
-    CloseAudioDevice();
+    
+    CloseAudioDevice(); // Close the audio device when done
     CloseWindow();
 
     return 0;
@@ -333,8 +380,7 @@ void DrawMenu() {
     DrawText("2 - Ranking", SCREEN_WIDTH / 2 - MeasureText("2 - Ranking", 30) / 2, SCREEN_HEIGHT / 2 - 40, 30, DARKGRAY);
     DrawText("3 - Créditos", SCREEN_WIDTH / 2 - MeasureText("3 - Créditos", 30) / 2, SCREEN_HEIGHT / 2, 30, DARKGRAY);
     DrawText("4 - Doações", SCREEN_WIDTH / 2 - MeasureText("4 - Doações", 30) / 2, SCREEN_HEIGHT / 2 + 40, 30, DARKGRAY);
-    DrawText("5 - Sair", SCREEN_WIDTH / 2 - MeasureText("5 - Sair", 30) / 2, SCREEN_HEIGHT / 2 + 80, 30, DARKGRAY);
-    
+
     EndDrawing();
 }
 
@@ -350,9 +396,6 @@ void DrawCredits(){
     DrawText("- Luan Nathan (Programador)", 100, 200, 20, DARKGRAY);
     DrawText("- Gabriel Vieira (Programador)", 100, 250, 20, DARKGRAY);
     
-    // Draw observation
-    DrawText("TAB - Voltar", 10, SCREEN_HEIGHT - 30, 20, RED);
-    
     EndDrawing();
 }
 void DrawDonations(){
@@ -364,9 +407,6 @@ void DrawDonations(){
     // Draw donations text
     DrawText("Doações:", 50, 50, 40, BLACK);
     DrawText("Nos apóie em: UrubuDoPix@gmail.com", 100, 150, 20, DARKGRAY);
-    
-    // Draw observation
-    DrawText("TAB - Voltar", 10, SCREEN_HEIGHT - 30, 20, RED);
     
     EndDrawing();
 }
@@ -458,9 +498,6 @@ void DrawScores() {
     for (int i = 0; i < 10; i++) {
         DrawText(TextFormat("%d. %s - %d", i + 1, scores[i].playerName, scores[i].score), 100, 150 + i * 30, 20, DARKGRAY);
     }
-
-    // Draw observation
-    DrawText("TAB - Voltar", 10, SCREEN_HEIGHT - 30, 20, RED);
 
     EndDrawing();
 }
